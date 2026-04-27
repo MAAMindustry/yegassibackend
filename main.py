@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
 from contextlib import asynccontextmanager
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, Text, JSON, ForeignKey, func
@@ -292,13 +293,27 @@ app.add_middleware(CORSMiddleware,
 
 # ─── ROUTES : SANTÉ ──────────────────────────────────────────────────────────
 
-@app.get("/", tags=["Santé"])
-def racine():
-    return {"app": settings.APP_NAME, "version": settings.APP_VERSION, "status": "✅ En ligne", "docs": "/docs"}
-
 @app.get("/health", tags=["Santé"])
 def health():
     return {"status": "ok"}
+
+@app.get("/api", tags=["Santé"])
+def racine():
+    return {"app": settings.APP_NAME, "version": settings.APP_VERSION, "status": "✅ En ligne", "docs": "/docs"}
+
+# ─── FRONTEND STATIQUE ───────────────────────────────────────────────────────
+
+import os
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    index = os.path.join(STATIC_DIR, "index.html")
+    if os.path.isfile(index):
+        return FileResponse(index)
+    return {"app": settings.APP_NAME, "version": settings.APP_VERSION, "status": "✅ En ligne", "docs": "/docs"}
 
 # ─── ROUTES : AUTH ───────────────────────────────────────────────────────────
 
